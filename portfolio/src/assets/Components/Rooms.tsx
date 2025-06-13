@@ -5,8 +5,8 @@ import room3Img from "../Room3.jpg";
 
 const ROOM_TYPES = [
   { value: "double", label: "Double Room With Garden View" },
-  { value: "deluxe", label: "Deluxe Room" },
-  { value: "superior", label: "Superior Room" },
+  { value: "shared", label: "Double Room With Shared Bathroom" },
+  { value: "Twin", label: "Double/Twin Room With Shared Bathroom" },
 ];
 
 const ROOM_CARDS = [
