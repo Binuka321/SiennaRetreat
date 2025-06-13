@@ -50,10 +50,10 @@ const Facilities: React.FC = () => {
     <section className=" bg-white text-gray-900">
       <section className="py-20 bg-white text-gray-900">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center max-w-6xl mx-auto px-6 md:px-20">
-          <h2 className="text-4xl md:text-4xl font-serif font-bold leading-tight">
+          <h2 className="text-5xl md:text-5xl font-serif font-bold leading-tight">
             Enjoy Complete And <br /> Best Quality Facilities
           </h2>
-         <p className="text-gray-500 text-lg md:text-xl font-serif leading-relaxed">
+         <p className="text-gray-500 text-lg md:text-2xl font-serif leading-relaxed">
             Providing an exceptional experience with all the top amenities and comforts you expect during your stay.
          </p>
          </div>

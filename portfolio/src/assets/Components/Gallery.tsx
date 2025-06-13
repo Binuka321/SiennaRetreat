@@ -3,7 +3,7 @@ const Gallery: React.FC = () => {
 
   return (
     <section className="py-16 text-center">
-      <h2 className="text-3xl font-bold mb-8">Enjoy An Unforgettable Stay With The Best Charm</h2>
+      <h2 className="text-4xl font-bold mb-8">Enjoy An Unforgettable Stay With The Best Charm</h2>
       <div className="flex justify-center gap-6 flex-wrap">
         {images.map((src, index) => (
           <img

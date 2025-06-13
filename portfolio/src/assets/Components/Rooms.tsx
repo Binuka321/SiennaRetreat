@@ -20,7 +20,7 @@ const ROOM_CARDS = [
     title: "Double Room with Private Bathroom",
     img: room2Img,
     price: "$ 15/night",
-    details: "12 m² | 1-2 guests | Free WIFI",
+    details: "12 m² | 1-3 guests | Free WIFI",
   },
   {
     title: "Double or Twin Room with Shared Bathroom",
@@ -127,7 +127,7 @@ export default function RoomsHero() {
 
         {/* Hero text section */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center bg-[#f8f2e9] px-6 md:px-20 py-20 rounded-md mb-16">
-          <h2 className="text-5xl md:text-7xl text-black font-serif font-bold leading-tight">
+          <h2 className="text-5xl md:text-5xl text-black font-serif font-bold leading-tight">
             Comfortable Rooms <br /> Just For You
           </h2>
           <p className="text-lg md:text-2xl text-gray-500 font-serif leading-relaxed">
@@ -152,7 +152,7 @@ export default function RoomsHero() {
               </div>
 
               <div className="p-6 text-center">
-                <h3 className="text-xl font-semibold font-serif mb-2">
+                <h3 className="text-black text-lg font-light  mb-3">
                   {room.title}
                 </h3>
                 <p className="text-gray-500 font-light text-sm mb-3">
