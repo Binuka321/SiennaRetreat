@@ -49,7 +49,7 @@ const Facilities: React.FC = () => {
   return (
     <section className=" bg-white text-gray-900">
       <section className="py-20 bg-white text-gray-900">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center max-w-6xl mx-auto px-6 md:px-20">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center max-w-10xl mx-auto px-6 md:px-20">
           <h2 className="text-5xl md:text-5xl font-serif font-bold leading-tight">
             Enjoy Complete And <br /> Best Quality Facilities
           </h2>
@@ -59,7 +59,7 @@ const Facilities: React.FC = () => {
          </div>
     </section>
 
-      <div className="flex flex-wrap justify-center gap-8">
+      <div className="flex flex-wrap justify-center gap-30">
         {/* Group 1: Popular Facilities */}
         <div className="bg-[#fdf9f3] w-72 p-6 rounded-md">
           <div className="flex items-center mb-4 text-lg font-semibold">
