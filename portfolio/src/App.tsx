@@ -1,21 +1,21 @@
-import Header from "./assets/Components/Header";
-import About from "./assets/Components/About";
-import Projects from "./assets/Components/Project";
-import Contact from "./assets/Components/Contact";
-import Footer from "./assets/Components/Footer";
+import Navbar from './assets/Components/Navbar';
+import Hero from './assets/Components/Hero';
+import Rooms from './assets/Components/Rooms';
+import Facilities from './assets/Components/Facilities';
+import Gallery from './assets/Components/Gallery';
+import Footer from './assets/Components/Footer';
 
-function App() {
+const App: React.FC = () => {
   return (
-    <div className="font-sans bg-white text-gray-800 dark:bg-[#121212] dark:text-gray-100 transition-colors duration-300">
-      <Header />
-      <main className="max-w-5xl mx-auto px-4 space-y-16">
-        <About />
-        <Projects />
-        <Contact />
-      </main>
+    <div className="font-sans">
+      <Navbar />
+      <Hero />
+      <Rooms />
+      <Facilities />
+      <Gallery />
       <Footer />
     </div>
   );
-}
+};
 
 export default App;
