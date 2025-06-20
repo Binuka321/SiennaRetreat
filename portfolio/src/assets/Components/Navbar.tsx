@@ -1,13 +1,20 @@
-import React, { useState } from 'react';
-import logo from '../logo.jpg';
-import { FaUserCircle } from 'react-icons/fa';
-import { auth, provider } from '../../firebase';  
-import { signInWithPopup, signOut } from 'firebase/auth';
+import React, { useState, useEffect } from "react";
+import logo from "../logo.jpg";
+import { FaUserCircle } from "react-icons/fa";
+import { auth, provider } from "../../config/firebase-config";
+import {
+  signInWithPopup,
+  signOut,
+  onAuthStateChanged,
+  GoogleAuthProvider,
+} from "firebase/auth";
 
 const Navbar: React.FC = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [userPhoto, setUserPhoto] = useState<string | null>(null);
+  const [userEmail, setUserEmail] = useState<string | null>(null);
+  console.log(userEmail);
 
   const toggleDropdown = () => {
     setDropdownOpen(!dropdownOpen);
@@ -17,12 +24,20 @@ const Navbar: React.FC = () => {
     try {
       const result = await signInWithPopup(auth, provider);
       const user = result.user;
+
+      const credential = GoogleAuthProvider.credentialFromResult(result);
+      const accessToken = credential?.accessToken || "";
+      const idToken = await user.getIdToken();
+
+      localStorage.setItem("accessToken", `${accessToken}`);
+      localStorage.setItem("token", `Bearer ${idToken}`);
+
       setIsLoggedIn(true);
       setUserPhoto(user.photoURL);
       setDropdownOpen(false);
-      console.log('Logged in as:', user.displayName);
+      console.log("Logged in as:", user.displayName);
     } catch (error) {
-      console.error('Login failed:', error);
+      console.error("Login failed:", error);
     }
   };
 
@@ -31,12 +46,34 @@ const Navbar: React.FC = () => {
       await signOut(auth);
       setIsLoggedIn(false);
       setUserPhoto(null);
+      setUserEmail(null);
       setDropdownOpen(false);
-      console.log('Logged out');
+      localStorage.removeItem("accessToken");
+      localStorage.removeItem("token");
+      console.log("Logged out");
     } catch (error) {
-      console.error('Logout failed:', error);
+      console.error("Logout failed:", error);
     }
   };
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (user) {
+        setIsLoggedIn(true);
+        setUserPhoto(user.photoURL);
+        setUserEmail(user.email || "");
+        localStorage.setItem("email", user.email || "");
+        console.log("Restored session for:", user.email);
+      } else {
+        setIsLoggedIn(false);
+        setUserPhoto(null);
+        setUserEmail(null);
+        localStorage.removeItem("email");
+      }
+    });
+
+    return () => unsubscribe();
+  }, []);
 
   return (
     <nav className="fixed top-0 left-0 w-full z-50 flex items-center justify-between px-8 py-4 bg-black bg-opacity-70 text-white">
@@ -45,11 +82,46 @@ const Navbar: React.FC = () => {
       </div>
 
       <ul className="hidden md:flex space-x-10 text-lg">
-        <li><a href="#hero" className="hover:text-yellow-400 transition duration-300">Home</a></li>
-        <li><a href="#rooms" className="hover:text-yellow-400 transition duration-300">Rooms</a></li>
-        <li><a href="#facilities" className="hover:text-yellow-400 transition duration-300">Facilities</a></li>
-        <li><a href="#gallery" className="hover:text-yellow-400 transition duration-300">Gallery</a></li>
-        <li><a href="#contact" className="hover:text-yellow-400 transition duration-300">Contact</a></li>
+        <li>
+          <a
+            href="#hero"
+            className="hover:text-yellow-400 transition duration-300"
+          >
+            Home
+          </a>
+        </li>
+        <li>
+          <a
+            href="#rooms"
+            className="hover:text-yellow-400 transition duration-300"
+          >
+            Rooms
+          </a>
+        </li>
+        <li>
+          <a
+            href="#facilities"
+            className="hover:text-yellow-400 transition duration-300"
+          >
+            Facilities
+          </a>
+        </li>
+        <li>
+          <a
+            href="#gallery"
+            className="hover:text-yellow-400 transition duration-300"
+          >
+            Gallery
+          </a>
+        </li>
+        <li>
+          <a
+            href="#contact"
+            className="hover:text-yellow-400 transition duration-300"
+          >
+            Contact
+          </a>
+        </li>
       </ul>
 
       <div className="flex items-center space-x-4">
@@ -57,7 +129,6 @@ const Navbar: React.FC = () => {
           Book Now
         </button>
 
-        {/* Account Icon */}
         <div className="relative">
           <button
             onClick={toggleDropdown}
@@ -65,7 +136,7 @@ const Navbar: React.FC = () => {
           >
             {isLoggedIn ? (
               <img
-                src={userPhoto || 'https://via.placeholder.com/40'}
+                src={userPhoto || "https://via.placeholder.com/40"}
                 alt="User"
                 className="h-10 w-10 rounded-full border-2 border-yellow-400 object-cover"
               />
@@ -74,7 +145,6 @@ const Navbar: React.FC = () => {
             )}
           </button>
 
-          {/* Dropdown */}
           {dropdownOpen && (
             <div className="absolute right-0 mt-3 w-44 bg-white rounded-lg shadow-lg text-black py-2 z-50">
               {isLoggedIn ? (
