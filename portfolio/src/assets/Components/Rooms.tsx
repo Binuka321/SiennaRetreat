@@ -1,6 +1,6 @@
 import { useState } from "react";
 import room1Img from "../Room1.jpg";
-import room2Img from "../Room1.jpg";
+import room2Img from "../Room2.jpg";
 import room3Img from "../Room3.jpg";
 
 const ROOM_TYPES = [
