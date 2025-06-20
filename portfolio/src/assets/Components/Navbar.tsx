@@ -138,7 +138,7 @@ const Navbar: React.FC = () => {
               <img
                 src={userPhoto || "https://via.placeholder.com/40"}
                 alt="User"
-                className="h-10 w-10 rounded-full border-2 border-yellow-400 object-cover"
+                className="h-10 w-10 rounded-full border-2  object-cover"
               />
             ) : (
               <FaUserCircle size={36} />

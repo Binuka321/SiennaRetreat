@@ -2,6 +2,13 @@ import { useState } from "react";
 import room1Img from "../Room1.jpg";
 import room2Img from "../Room2.jpg";
 import room3Img from "../Room3.jpg";
+import {
+  getAuth,
+  signInWithPopup,
+  GoogleAuthProvider,
+} from "firebase/auth";
+import { auth, provider } from "../../config/firebase-config";
+import { useNavigate } from "react-router-dom";
 
 const ROOM_TYPES = [
   { value: "double", label: "Double Room With Garden View" },
@@ -35,6 +42,10 @@ export default function RoomsHero() {
   const [checkIn, setCheckIn] = useState("2025-05-18");
   const [checkOut, setCheckOut] = useState("2025-05-19");
   const [rooms, setRooms] = useState("1");
+  const [showLoginPrompt, setShowLoginPrompt] = useState(false);
+
+  const navigate = useNavigate();
+  const adminEmail = "siennaretreat@gmail.com"; // 🔐 Set your admin Gmail here
 
   const handleRoomsChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const value = e.target.value;
@@ -57,9 +68,45 @@ export default function RoomsHero() {
     });
   };
 
+  const handleSearch = () => {
+    const authInstance = getAuth();
+    const user = authInstance.currentUser;
+
+    if (!user) {
+      setShowLoginPrompt(true);
+    } else {
+      alert("Searching rooms...");
+      // Add search logic or API call here if needed
+    }
+  };
+
+  const handleLogin = async () => {
+    try {
+      const result = await signInWithPopup(auth, provider);
+      const user = result.user;
+      const credential = GoogleAuthProvider.credentialFromResult(result);
+      const accessToken = credential?.accessToken || "";
+      const idToken = await user.getIdToken();
+
+      localStorage.setItem("accessToken", `${accessToken}`);
+      localStorage.setItem("token", `Bearer ${idToken}`);
+      localStorage.setItem("email", user.email || "");
+
+      setShowLoginPrompt(false);
+
+      // 🔐 Redirect admin
+      if (user.email === adminEmail) {
+        navigate("/admin");
+      } else {
+        handleSearch(); // run normal search if not admin
+      }
+    } catch (error) {
+      console.error("Login failed:", error);
+    }
+  };
+
   return (
     <section className="relative text-white">
-      {/* Search bar */}
       <div className="relative z-10 px-4 md:px-20 py-12">
         <div className="bg-[#f8f2e9] text-black rounded-md shadow-lg flex flex-wrap justify-between items-center px-6 py-4 mb-16">
           <div className="flex flex-col items-start mb-4 md:mb-0 md:mr-4">
@@ -120,12 +167,15 @@ export default function RoomsHero() {
             />
           </div>
 
-          <button className="bg-[#b89b5e] text-white font-semibold text-lg px-6 py-2 rounded-md hover:bg-[#a6853e]">
+          <button
+            className="bg-[#b89b5e] text-white font-semibold text-lg px-6 py-2 rounded-md hover:bg-[#a6853e]"
+            onClick={handleSearch}
+          >
             Search
           </button>
         </div>
 
-        {/* Hero text section */}
+        {/* Hero Section */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center bg-[#f8f2e9] px-6 md:px-20 py-20 rounded-md mb-16">
           <h2 className="text-5xl md:text-5xl text-black font-serif font-bold leading-tight">
             Comfortable Rooms <br /> Just For You
@@ -136,23 +186,23 @@ export default function RoomsHero() {
           </p>
         </div>
 
-        {/* Room cards */}
+        {/* Room Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           {ROOM_CARDS.map((room, idx) => (
             <div
               key={idx}
               className="bg-white rounded-md overflow-hidden shadow-md"
             >
-             <div className="w-full aspect-square max-w-[300px] mx-auto overflow-hidden">
+              <div className="w-full aspect-square max-w-[300px] mx-auto overflow-hidden">
                 <img
-                   src={room.img}
-                   alt={room.title}
+                  src={room.img}
+                  alt={room.title}
                   className="w-full h-full object-cover rounded-xl"
                 />
               </div>
 
               <div className="p-6 text-center">
-                <h3 className="text-black text-lg font-light  mb-3">
+                <h3 className="text-black text-lg font-light mb-3">
                   {room.title}
                 </h3>
                 <p className="text-gray-500 font-light text-sm mb-3">
@@ -167,6 +217,32 @@ export default function RoomsHero() {
           ))}
         </div>
       </div>
+
+      {/* Login Modal */}
+      {showLoginPrompt && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full text-center shadow-xl">
+            <h2 className="text-lg font-semibold text-gray-800 mb-4">
+              You must be logged in to search
+            </h2>
+            <p className="text-gray-600 mb-6">Would you like to log in now?</p>
+            <div className="flex justify-center gap-4">
+              <button
+                onClick={handleLogin}
+                className="bg-[#b89b5e] text-white px-4 py-2 rounded hover:bg-[#a6853e]"
+              >
+                Log In with Google
+              </button>
+              <button
+                onClick={() => setShowLoginPrompt(false)}
+                className="bg-gray-300 text-gray-700 px-4 py-2 rounded hover:bg-gray-400"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </section>
   );
 }
