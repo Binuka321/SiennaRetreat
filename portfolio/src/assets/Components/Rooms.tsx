@@ -18,13 +18,13 @@ const ROOM_TYPES = [
 
 const ROOM_CARDS = [
   {
-    title: "Double Room with Shared Bathroom",
+    title: "Double Room with Garden View",
     img: room1Img,
     price: "$ 15/night",
     details: "12 m² | 1-3 guests | Free WIFI",
   },
   {
-    title: "Double Room with Private Bathroom",
+    title: "Family Room with Shared Bathroom",
     img: room2Img,
     price: "$ 15/night",
     details: "12 m² | 1-3 guests | Free WIFI",
