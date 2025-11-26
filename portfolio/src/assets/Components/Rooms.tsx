@@ -37,15 +37,49 @@ const ROOM_CARDS = [
   },
 ];
 
+interface Room {
+  _id: string;
+  type: string;
+  title: string;
+  price: string;
+  details: string;
+  img: string;
+  isAvailable?: boolean;
+}
+
+interface BookingFormData {
+  roomId: string;
+  userName: string;
+  userEmail: string;
+  userPhone: string;
+  numberOfGuests: number;
+  specialRequests: string;
+}
+
 export default function RoomsHero() {
   const [roomTypes, setRoomTypes] = useState<string[]>([""]);
   const [checkIn, setCheckIn] = useState("2025-05-18");
   const [checkOut, setCheckOut] = useState("2025-05-19");
   const [rooms, setRooms] = useState("1");
   const [showLoginPrompt, setShowLoginPrompt] = useState(false);
+  const [searchResults, setSearchResults] = useState<Room[]>([]);
+  const [showSearchResults, setShowSearchResults] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [showBookingForm, setShowBookingForm] = useState(false);
+  const [selectedRoom, setSelectedRoom] = useState<Room | null>(null);
+  const [bookingData, setBookingData] = useState<BookingFormData>({
+    roomId: "",
+    userName: "",
+    userEmail: "",
+    userPhone: "",
+    numberOfGuests: 1,
+    specialRequests: "",
+  });
+  const [bookingMessage, setBookingMessage] = useState("");
+  const [bookingError, setBookingError] = useState("");
 
   const navigate = useNavigate();
-  const adminEmail = "siennaretreat@gmail.com"; // 🔐 Set your admin Gmail here
+  const adminEmail = "siennaretreat@gmail.com";
 
   const handleRoomsChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const value = e.target.value;
@@ -68,15 +102,142 @@ export default function RoomsHero() {
     });
   };
 
-  const handleSearch = () => {
+  const handleSearch = async () => {
     const authInstance = getAuth();
     const user = authInstance.currentUser;
 
     if (!user) {
       setShowLoginPrompt(true);
-    } else {
-      alert("Searching rooms...");
-      // Add search logic or API call here if needed
+      return;
+    }
+
+    // Perform search with API
+    await performSearch();
+  };
+
+  const performSearch = async () => {
+    try {
+      setIsLoading(true);
+      setBookingMessage("");
+      setBookingError("");
+
+      // Get the first selected room type (for now, search with first room type selected)
+      const roomType = roomTypes[0] || "";
+      const params = new URLSearchParams({
+        checkInDate: checkIn,
+        checkOutDate: checkOut,
+        ...(roomType && { roomType }),
+      });
+
+      const response = await fetch(
+        `http://localhost:5000/api/rooms/search?${params}`,
+        {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to search rooms");
+      }
+
+      const data = await response.json();
+      setSearchResults(data);
+      setShowSearchResults(true);
+    } catch (error) {
+      console.error("Search error:", error);
+      setBookingError("Failed to search rooms. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleBookNow = (room: Room) => {
+    if (!room.isAvailable) {
+      setBookingError("This room is not available for the selected dates.");
+      return;
+    }
+
+    const authInstance = getAuth();
+    const user = authInstance.currentUser;
+
+    if (!user) {
+      setShowLoginPrompt(true);
+      return;
+    }
+
+    setSelectedRoom(room);
+    setBookingData({
+      roomId: room._id,
+      userName: user.displayName || "",
+      userEmail: user.email || "",
+      userPhone: "",
+      numberOfGuests: 1,
+      specialRequests: "",
+    });
+    setShowBookingForm(true);
+    setBookingError("");
+    setBookingMessage("");
+  };
+
+  const handleBookingInputChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
+  ) => {
+    const { name, value } = e.target;
+    setBookingData((prev) => ({
+      ...prev,
+      [name]: name === "numberOfGuests" ? parseInt(value, 10) : value,
+    }));
+  };
+
+  const submitBooking = async () => {
+    try {
+      setIsLoading(true);
+      setBookingError("");
+      setBookingMessage("");
+
+      if (!bookingData.userName || !bookingData.userEmail || !bookingData.userPhone) {
+        setBookingError("Please fill in all required fields.");
+        setIsLoading(false);
+        return;
+      }
+
+      const response = await fetch("http://localhost:5000/api/rooms/book", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          roomId: bookingData.roomId,
+          userName: bookingData.userName,
+          userEmail: bookingData.userEmail,
+          userPhone: bookingData.userPhone,
+          checkInDate: checkIn,
+          checkOutDate: checkOut,
+          numberOfGuests: bookingData.numberOfGuests,
+          specialRequests: bookingData.specialRequests,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Booking failed");
+      }
+
+      const data = await response.json();
+      setBookingMessage(`✓ ${data.message} Booking ID: ${data.booking._id}`);
+      setShowBookingForm(false);
+      setSearchResults([]);
+      setShowSearchResults(false);
+    } catch (error) {
+      console.error("Booking error:", error);
+      setBookingError(
+        error instanceof Error ? error.message : "Failed to complete booking"
+      );
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -94,11 +255,10 @@ export default function RoomsHero() {
 
       setShowLoginPrompt(false);
 
-      // 🔐 Redirect admin
       if (user.email === adminEmail) {
         navigate("/admin");
       } else {
-        handleSearch(); // run normal search if not admin
+        handleSearch();
       }
     } catch (error) {
       console.error("Login failed:", error);
@@ -168,62 +328,256 @@ export default function RoomsHero() {
           </div>
 
           <button
-            className="bg-[#b89b5e] text-white font-semibold text-lg px-6 py-2 rounded-md hover:bg-[#a6853e]"
+            className="bg-[#b89b5e] text-white font-semibold text-lg px-6 py-2 rounded-md hover:bg-[#a6853e] disabled:opacity-50"
             onClick={handleSearch}
+            disabled={isLoading}
           >
-            Search
+            {isLoading ? "Searching..." : "Search"}
           </button>
         </div>
 
-        {/* Hero Section */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center bg-[#f8f2e9] px-6 md:px-20 py-20 rounded-md mb-16">
-          <h2 className="text-5xl md:text-5xl text-black font-serif font-bold leading-tight">
-            Comfortable Rooms <br /> Just For You
-          </h2>
-          <p className="text-lg md:text-2xl text-gray-500 font-serif leading-relaxed">
-            Discover a perfect blend of style and comfort, where every detail is
-            crafted to make your stay truly unforgettable.
-          </p>
-        </div>
+        {/* Messages */}
+        {bookingMessage && (
+          <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-4">
+            {bookingMessage}
+          </div>
+        )}
+        {bookingError && (
+          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+            {bookingError}
+          </div>
+        )}
 
-        {/* Room Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          {ROOM_CARDS.map((room, idx) => (
-            <div
-              key={idx}
-              className="bg-white rounded-md overflow-hidden shadow-md"
-            >
-              <div className="w-full aspect-square max-w-[300px] mx-auto overflow-hidden">
-                <img
-                  src={room.img}
-                  alt={room.title}
-                  className="w-full h-full object-cover rounded-xl"
+        {/* Search Results */}
+        {showSearchResults && (
+          <div className="mb-16">
+            <h3 className="text-2xl text-white font-bold mb-8">Available Rooms</h3>
+            {searchResults.length === 0 ? (
+              <p className="text-white text-lg">No rooms available for the selected dates.</p>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                {searchResults.map((room) => (
+                  <div
+                    key={room._id}
+                    className={`bg-white rounded-md overflow-hidden shadow-md ${
+                      !room.isAvailable ? "opacity-60" : ""
+                    }`}
+                  >
+                    <div className="w-full aspect-square max-w-[300px] mx-auto overflow-hidden">
+                      <img
+                        src={room.img}
+                        alt={room.title}
+                        className="w-full h-full object-cover rounded-xl"
+                      />
+                    </div>
+
+                    <div className="p-6 text-center">
+                      <h3 className="text-black text-lg font-light mb-3">
+                        {room.title}
+                      </h3>
+                      <p className="text-gray-500 font-light text-sm mb-3">
+                        From :{" "}
+                        <span className="text-[#b89b5e] font-semibold text-lg italic">
+                          {room.price}
+                        </span>
+                      </p>
+                      <p className="text-gray-600 text-sm mb-4">{room.details}</p>
+
+                      {/* Availability Status */}
+                      <div className="mb-4">
+                        {room.isAvailable ? (
+                          <span className="inline-block bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-semibold">
+                            ✓ Available
+                          </span>
+                        ) : (
+                          <span className="inline-block bg-red-100 text-red-800 px-3 py-1 rounded-full text-sm font-semibold">
+                            ✗ Not Available
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Book Button */}
+                      <button
+                        onClick={() => handleBookNow(room)}
+                        disabled={!room.isAvailable}
+                        className={`w-full px-4 py-2 rounded font-semibold ${
+                          room.isAvailable
+                            ? "bg-[#b89b5e] text-white hover:bg-[#a6853e]"
+                            : "bg-gray-300 text-gray-500 cursor-not-allowed"
+                        }`}
+                      >
+                        {room.isAvailable ? "Book Now" : "Not Available"}
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Hero Section */}
+        {!showSearchResults && (
+          <>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center bg-[#f8f2e9] px-6 md:px-20 py-20 rounded-md mb-16">
+              <h2 className="text-5xl md:text-5xl text-black font-serif font-bold leading-tight">
+                Comfortable Rooms <br /> Just For You
+              </h2>
+              <p className="text-lg md:text-2xl text-gray-500 font-serif leading-relaxed">
+                Discover a perfect blend of style and comfort, where every detail is
+                crafted to make your stay truly unforgettable.
+              </p>
+            </div>
+
+            {/* Room Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+              {ROOM_CARDS.map((room, idx) => (
+                <div
+                  key={idx}
+                  className="bg-white rounded-md overflow-hidden shadow-md"
+                >
+                  <div className="w-full aspect-square max-w-[300px] mx-auto overflow-hidden">
+                    <img
+                      src={room.img}
+                      alt={room.title}
+                      className="w-full h-full object-cover rounded-xl"
+                    />
+                  </div>
+
+                  <div className="p-6 text-center">
+                    <h3 className="text-black text-lg font-light mb-3">
+                      {room.title}
+                    </h3>
+                    <p className="text-gray-500 font-light text-sm mb-3">
+                      From :{" "}
+                      <span className="text-[#b89b5e] font-semibold text-lg italic">
+                        {room.price}
+                      </span>
+                    </p>
+                    <p className="text-gray-600 text-sm">{room.details}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+      </div>
+
+      {/* Booking Form Modal */}
+      {showBookingForm && selectedRoom && (
+        <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg p-8 max-w-2xl w-full shadow-xl max-h-96 overflow-y-auto">
+            <h2 className="text-2xl font-semibold text-gray-800 mb-2">
+              Book {selectedRoom.title}
+            </h2>
+            <p className="text-gray-600 mb-6">
+              Check-in: {checkIn} | Check-out: {checkOut}
+            </p>
+
+            <form className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-gray-700 font-semibold mb-1">
+                    Full Name *
+                  </label>
+                  <input
+                    type="text"
+                    name="userName"
+                    value={bookingData.userName}
+                    onChange={handleBookingInputChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:border-[#b89b5e]"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-gray-700 font-semibold mb-1">
+                    Email *
+                  </label>
+                  <input
+                    type="email"
+                    name="userEmail"
+                    value={bookingData.userEmail}
+                    onChange={handleBookingInputChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:border-[#b89b5e]"
+                    required
+                    disabled
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-gray-700 font-semibold mb-1">
+                    Phone Number *
+                  </label>
+                  <input
+                    type="tel"
+                    name="userPhone"
+                    value={bookingData.userPhone}
+                    onChange={handleBookingInputChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:border-[#b89b5e]"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-gray-700 font-semibold mb-1">
+                    Number of Guests
+                  </label>
+                  <select
+                    name="numberOfGuests"
+                    value={bookingData.numberOfGuests}
+                    onChange={handleBookingInputChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:border-[#b89b5e]"
+                  >
+                    {[1, 2, 3, 4, 5].map((num) => (
+                      <option key={num} value={num}>
+                        {num} Guest{num > 1 ? "s" : ""}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-gray-700 font-semibold mb-1">
+                  Special Requests (Optional)
+                </label>
+                <textarea
+                  name="specialRequests"
+                  value={bookingData.specialRequests}
+                  onChange={handleBookingInputChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:border-[#b89b5e]"
+                  rows={3}
+                  placeholder="Any special requests or preferences..."
                 />
               </div>
+            </form>
 
-              <div className="p-6 text-center">
-                <h3 className="text-black text-lg font-light mb-3">
-                  {room.title}
-                </h3>
-                <p className="text-gray-500 font-light text-sm mb-3">
-                  From :{" "}
-                  <span className="text-[#b89b5e] font-semibold text-lg italic">
-                    {room.price}
-                  </span>
-                </p>
-                <p className="text-gray-600 text-sm">{room.details}</p>
-              </div>
+            <div className="flex justify-end gap-4 mt-6">
+              <button
+                onClick={() => setShowBookingForm(false)}
+                className="bg-gray-300 text-gray-700 px-6 py-2 rounded hover:bg-gray-400 font-semibold"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={submitBooking}
+                disabled={isLoading}
+                className="bg-[#b89b5e] text-white px-6 py-2 rounded hover:bg-[#a6853e] font-semibold disabled:opacity-50"
+              >
+                {isLoading ? "Processing..." : "Confirm Booking"}
+              </button>
             </div>
-          ))}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Login Modal */}
       {showLoginPrompt && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 max-w-md w-full text-center shadow-xl">
             <h2 className="text-lg font-semibold text-gray-800 mb-4">
-              You must be logged in to search
+              You must be logged in to search and book
             </h2>
             <p className="text-gray-600 mb-6">Would you like to log in now?</p>
             <div className="flex justify-center gap-4">
