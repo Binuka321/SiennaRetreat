@@ -19,6 +19,9 @@ if (missingEnvVars.length > 0) {
 const facilitiesRoutes = require('./routes/facilities');
 const usersRoutes = require('./routes/users');
 const roomsRoutes = require('./routes/rooms');
+const debugRoutes = require('./routes/debug');
+const healthRoutes = require('./routes/health');
+const authRoutes = require('./routes/auth');
 
 const app = express();
 app.use(cors());
@@ -27,6 +30,9 @@ app.use(express.json());
 app.use('/api/facilities', facilitiesRoutes);
 app.use('/api/users', usersRoutes);
 app.use('/api/rooms', roomsRoutes);
+app.use('/api/health', healthRoutes);
+app.use('/api/debug', debugRoutes);
+app.use('/api/auth', authRoutes);
 
 const PORT = process.env.PORT || 5000;
 
@@ -61,11 +67,6 @@ async function connectToMongoDB() {
     await mongoose.connect(process.env.MONGO_URI, mongooseOptions);
     console.log(`[${new Date().toISOString()}] MongoDB connected successfully`);
     connectionAttempts = 0; // Reset on success
-    
-    // Start the server only after successful DB connection
-    app.listen(PORT, () => {
-      console.log(`[${new Date().toISOString()}] Server running on port ${PORT}`);
-    });
   } catch (err) {
     console.error(`[${new Date().toISOString()}] MongoDB connection failed (attempt ${connectionAttempts}/${maxAttempts}):`);
     console.error(err.message);
@@ -74,10 +75,30 @@ async function connectToMongoDB() {
       console.log(`Retrying in ${delay / 1000} seconds...`);
       setTimeout(connectToMongoDB, delay);
     } else {
-      console.error(`[${new Date().toISOString()}] Max connection attempts reached. Exiting.`);
-      process.exit(1);
+      console.error(`[${new Date().toISOString()}] Max connection attempts reached. Running in offline mode with mock data.`);
+      // Don't exit - continue running with mock data
     }
   }
 }
 
+// Start server immediately and bind to 0.0.0.0 to ensure IPv4/localhost reachability on Windows
+const server = app.listen(PORT, '0.0.0.0', () => {
+  const addr = server.address();
+  try {
+    console.log(`[${new Date().toISOString()}] Server running on port ${PORT}`);
+    console.log('Server address info:', addr);
+  } catch (e) {
+    console.log('Server started but could not read address info', e && e.message ? e.message : e);
+  }
+});
+
+process.on('uncaughtException', (err) => {
+  console.error('UNCAUGHT EXCEPTION', err && err.stack ? err.stack : err);
+});
+
+process.on('unhandledRejection', (reason, p) => {
+  console.error('UNHANDLED REJECTION at Promise', p, 'reason:', reason);
+});
+
+// Attempt MongoDB connection in the background
 connectToMongoDB();

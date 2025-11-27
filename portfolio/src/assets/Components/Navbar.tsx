@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useContext } from "react";
 import logo from "../logo.jpg";
 import { FaUserCircle } from "react-icons/fa";
 import { auth, provider } from "../../config/firebase-config";
@@ -9,6 +9,8 @@ import {
   GoogleAuthProvider,
 } from "firebase/auth";
 import UserProfile from "./UserProfile";
+import Auth from "./Auth";
+import { AuthContext } from "./AuthContext";
 
 const Navbar: React.FC = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -17,6 +19,8 @@ const Navbar: React.FC = () => {
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const [displayName, setDisplayName] = useState<string | null>(null);
   const [showProfile, setShowProfile] = useState(false);
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const { user: authContextUser, token: authContextToken, setUser, setToken } = useContext(AuthContext);
 
   const toggleDropdown = () => {
     setDropdownOpen(!dropdownOpen);
@@ -43,6 +47,14 @@ const Navbar: React.FC = () => {
       setDisplayName(name);
       setDropdownOpen(false);
 
+      // also set global auth context
+      try {
+        setUser({ username: name, email: user.email || null });
+        setToken(`Bearer ${idToken}`);
+      } catch (e) {
+        // ignore if context not available
+      }
+
       console.log("Logged in as:", name);
       console.log("Google photoURL:", googlePhoto);
     } catch (error) {
@@ -59,6 +71,7 @@ const Navbar: React.FC = () => {
       setDisplayName(null);
       setDropdownOpen(false);
       localStorage.clear();
+      try { setUser(null); setToken(null); } catch (e) {}
       console.log("Logged out");
     } catch (error) {
       console.error("Logout failed:", error);
@@ -77,6 +90,12 @@ const Navbar: React.FC = () => {
         setDisplayName(name);
         setUserEmail(email);
 
+        // mirror to AuthContext
+        try {
+          setUser({ username: name, email });
+          user.getIdToken().then((idToken) => setToken(`Bearer ${idToken}`)).catch(() => {});
+        } catch (e) {}
+
         localStorage.setItem("email", email || "");
 
         console.log("Restored session for:", email);
@@ -87,11 +106,32 @@ const Navbar: React.FC = () => {
         setUserEmail(null);
         setDisplayName(null);
         localStorage.removeItem("email");
+        try { setUser(null); setToken(null); } catch (e) {}
       }
     });
 
     return () => unsubscribe();
   }, []);
+
+  // Monitor AuthContext for username/password login/logout
+  useEffect(() => {
+    if (authContextUser && authContextToken) {
+      // User logged in via username/password
+      setIsLoggedIn(true);
+      setDisplayName(authContextUser.username || authContextUser.email || "User");
+      setUserEmail(authContextUser.email || null);
+      // No photo for username/password auth; keep existing or use icon
+      console.log("Logged in via username/password as:", authContextUser.username || authContextUser.email);
+    } else if (!authContextUser && !authContextToken) {
+      // Check if Google auth is still active
+      if (!auth.currentUser) {
+        // Neither auth method active
+        setIsLoggedIn(false);
+        setDisplayName(null);
+        setUserEmail(null);
+      }
+    }
+  }, [authContextUser, authContextToken]);
 
   return (
     <>
@@ -136,7 +176,7 @@ const Navbar: React.FC = () => {
             </button>
 
             {dropdownOpen && (
-              <div className="absolute right-0 mt-3 w-44 bg-white rounded-lg shadow-lg text-black py-2 z-50">
+              <div className="absolute right-0 mt-3 w-56 bg-white rounded-lg shadow-lg text-black py-2 z-50">
                 {isLoggedIn ? (
                   <>
                     <button
@@ -156,12 +196,20 @@ const Navbar: React.FC = () => {
                     </button>
                   </>
                 ) : (
-                  <button
-                    onClick={handleLogin}
-                    className="block w-full text-left px-4 py-2 hover:bg-gray-100"
-                  >
-                    Sign In
-                  </button>
+                  <>
+                    <button
+                      onClick={handleLogin}
+                      className="block w-full text-left px-4 py-2 hover:bg-gray-100"
+                    >
+                      Sign In with Google
+                    </button>
+                    <button
+                      onClick={() => { setShowAuthModal(true); setDropdownOpen(false); }}
+                      className="block w-full text-left px-4 py-2 hover:bg-gray-100"
+                    >
+                      Sign In with Username
+                    </button>
+                  </>
                 )}
               </div>
             )}
@@ -176,6 +224,9 @@ const Navbar: React.FC = () => {
           displayName={displayName}
           onClose={() => setShowProfile(false)}
         />
+      )}
+      {showAuthModal && (
+        <Auth onClose={() => setShowAuthModal(false)} />
       )}
     </>
   );
