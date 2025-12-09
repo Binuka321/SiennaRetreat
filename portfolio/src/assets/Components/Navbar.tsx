@@ -20,7 +20,7 @@ const Navbar: React.FC = () => {
   const [displayName, setDisplayName] = useState<string | null>(null);
   const [showProfile, setShowProfile] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
-  const { user: authContextUser, token: authContextToken, setUser, setToken } = useContext(AuthContext);
+  const { user: authContextUser, token: authContextToken, setUser, setToken, isAdmin: contextIsAdmin } = useContext(AuthContext) as any;
 
   const toggleDropdown = () => {
     setDropdownOpen(!dropdownOpen);
@@ -98,6 +98,11 @@ const Navbar: React.FC = () => {
 
         localStorage.setItem("email", email || "");
 
+        // detect admin by AuthContext or localStorage as fallback
+        const adminToken = localStorage.getItem('adminToken');
+        // no local state needed — rely on context
+        // keep localStorage in sync (no-op)
+
         console.log("Restored session for:", email);
         console.log("Google photoURL:", googlePhoto);
       } else {
@@ -107,6 +112,7 @@ const Navbar: React.FC = () => {
         setDisplayName(null);
         localStorage.removeItem("email");
         try { setUser(null); setToken(null); } catch (e) {}
+        // no-op for admin here; context owns admin state
       }
     });
 
@@ -122,6 +128,7 @@ const Navbar: React.FC = () => {
       setUserEmail(authContextUser.email || null);
       // No photo for username/password auth; keep existing or use icon
       console.log("Logged in via username/password as:", authContextUser.username || authContextUser.email);
+      // rely on contextIsAdmin; nothing to do here
     } else if (!authContextUser && !authContextToken) {
       // Check if Google auth is still active
       if (!auth.currentUser) {
@@ -141,7 +148,13 @@ const Navbar: React.FC = () => {
         </div>
 
         <ul className="hidden md:flex space-x-10 text-lg">
-          {["Home", "Rooms", "Facilities", "Gallery", "Contact"].map((item) => (
+          {[
+            'Home',
+            'Rooms',
+            'Facilities',
+            'Gallery',
+            'Contact'
+          ].map((item) => (
             <li key={item}>
               <a
                 href={`#${item.toLowerCase()}`}
@@ -151,6 +164,7 @@ const Navbar: React.FC = () => {
               </a>
             </li>
           ))}
+          {/* Admin link moved to user dropdown; do not show in main nav */}
         </ul>
 
         <div className="flex items-center space-x-4">
@@ -188,6 +202,14 @@ const Navbar: React.FC = () => {
                     >
                       View Profile
                     </button>
+                    {contextIsAdmin && (
+                      <button
+                        onClick={() => { setDropdownOpen(false); window.location.hash = '#admin'; }}
+                        className="block w-full text-left px-4 py-2 hover:bg-gray-100"
+                      >
+                        Admin Dashboard
+                      </button>
+                    )}
                     <button
                       onClick={handleLogout}
                       className="block w-full text-left px-4 py-2 hover:bg-gray-100"

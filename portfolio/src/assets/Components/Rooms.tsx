@@ -335,7 +335,7 @@ export default function RoomsHero() {
       setShowLoginPrompt(false);
 
       if (user.email === adminEmail) {
-        navigate("/admin");
+        try { window.location.hash = '#admin'; } catch (e) {}
       } else {
         handleSearch();
       }

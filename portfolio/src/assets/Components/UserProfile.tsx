@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 
 interface UserProfileProps {
   photoURL: string | null;
@@ -16,11 +16,79 @@ const UserProfile: React.FC<UserProfileProps> = ({
   const [name, setName] = useState(displayName || "");
   const [phone, setPhone] = useState("");
   const [address, setAddress] = useState("");
-  const [editing, setEditing] = useState(true); // true to allow editing by default
+  const [editing, setEditing] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [message, setMessage] = useState<string | null>(null);
 
-  const handleSave = () => {
-    console.log("Saved:", { name, email, phone, address });
-    setEditing(false);
+  useEffect(() => {
+    // Fetch user profile data from backend
+    const fetchProfile = async () => {
+      try {
+        const API_BASE = (import.meta.env.VITE_API_BASE as string) || 'http://localhost:5000';
+          const token = localStorage.getItem('token');
+        
+        if (email && token) {
+          const res = await fetch(`${API_BASE}/api/users/profile/${email}`, {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          
+          if (res.ok) {
+            const data = await res.json();
+            setName(data.name || displayName || "");
+            setPhone(data.phone || "");
+            setAddress(data.address || "");
+          }
+        }
+      } catch (err) {
+        console.error('Failed to fetch profile:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProfile();
+  }, [email, displayName]);
+
+  const handleSave = async () => {
+    try {
+      setMessage(null);
+      const API_BASE = (import.meta.env.VITE_API_BASE as string) || 'http://localhost:5000';
+        const token = localStorage.getItem('token');
+      
+      if (!token) {
+        setMessage('Not authenticated');
+        return;
+      }
+
+      if (!email) {
+        setMessage('Email not found');
+        return;
+      }
+
+      const res = await fetch(`${API_BASE}/api/users/profile/${email}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ name, phone, address }),
+      });
+
+      const data = await res.json();
+      
+      if (res.ok) {
+        setEditing(false);
+        setMessage('Profile saved successfully');
+        setTimeout(() => setMessage(null), 2000);
+        console.log("Profile saved:", data);
+      } else {
+        setMessage(data.message || 'Failed to save profile');
+        console.error('Save failed:', data);
+      }
+    } catch (err) {
+      setMessage('Error saving profile');
+      console.error('Error saving profile:', err);
+    }
   };
 
   return (
@@ -87,6 +155,12 @@ const UserProfile: React.FC<UserProfileProps> = ({
                 disabled={!editing}
               />
             </div>
+
+            {message && (
+              <div className={`text-sm p-2 rounded ${message.includes('success') ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                {message}
+              </div>
+            )}
 
             <div className="flex justify-between mt-6">
               <button
