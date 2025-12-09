@@ -54,6 +54,11 @@ const BookingSchema = new mongoose.Schema({
   // Special requests (optional)
   specialRequests: String
 
+  ,
+  // External source tracking to avoid duplicate imports
+  source: { type: String }, // e.g., 'airbnb', 'booking.com', 'ical'
+  externalId: { type: String } // id from external calendar event
+
 }, { timestamps: true });
 
 module.exports = mongoose.model('Booking', BookingSchema);

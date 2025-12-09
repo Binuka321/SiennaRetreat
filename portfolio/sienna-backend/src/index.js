@@ -22,6 +22,9 @@ const roomsRoutes = require('./routes/rooms');
 const debugRoutes = require('./routes/debug');
 const healthRoutes = require('./routes/health');
 const authRoutes = require('./routes/auth');
+const adminRoutes = require('./routes/admin');
+const calendarRoutes = require('./routes/calendars');
+const calendarSync = require('./services/calendarSync');
 
 const app = express();
 app.use(cors());
@@ -33,6 +36,8 @@ app.use('/api/rooms', roomsRoutes);
 app.use('/api/health', healthRoutes);
 app.use('/api/debug', debugRoutes);
 app.use('/api/auth', authRoutes);
+app.use('/api/admin', adminRoutes);
+app.use('/api/calendars', calendarRoutes);
 
 const PORT = process.env.PORT || 5000;
 
@@ -102,3 +107,13 @@ process.on('unhandledRejection', (reason, p) => {
 
 // Attempt MongoDB connection in the background
 connectToMongoDB();
+
+// Start calendar sync service after a short delay (allow DB connection attempt)
+setTimeout(() => {
+  try {
+    calendarSync.start();
+    console.log('[CalendarSync] Service started');
+  } catch (e) {
+    console.error('[CalendarSync] Could not start service', e && e.message ? e.message : e);
+  }
+}, 5000);

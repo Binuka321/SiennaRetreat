@@ -1,0 +1,14 @@
+[
+  {
+    "name": "Airbnb - Room 1",
+    "provider": "airbnb",
+    "url": "https://www.airbnb.com/calendar/ical/EXAMPLE.ics",
+    "roomId": "<ROOM_ID>"
+  },
+  {
+    "name": "Booking.com - Room 1",
+    "provider": "booking.com",
+    "url": "https://www.booking.com/calendar/ical/EXAMPLE.ics",
+    "roomId": "<ROOM_ID>"
+  }
+]

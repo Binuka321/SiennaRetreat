@@ -6,10 +6,13 @@ const API_BASE = (import.meta.env.VITE_API_BASE as string) || 'http://localhost:
 
 const Auth: React.FC<{ onClose: () => void }> = ({ onClose }) => {
   const { setUser, setToken } = useContext(AuthContext);
+  const { setIsAdmin } = useContext(AuthContext) as any;
   const [mode, setMode] = useState<'login' | 'register'>('login');
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [phone, setPhone] = useState('');
+  const [address, setAddress] = useState('');
   const [message, setMessage] = useState<string | null>(null);
 
   const submit = async (e: React.FormEvent) => {
@@ -25,6 +28,8 @@ const Auth: React.FC<{ onClose: () => void }> = ({ onClose }) => {
         if (username) body.username = username;
         if (email) body.email = email;
       }
+      if (phone) body.phone = phone;
+      if (address) body.address = address;
 
       const res = await fetch(url, {
         method: 'POST',
@@ -37,8 +42,13 @@ const Auth: React.FC<{ onClose: () => void }> = ({ onClose }) => {
 
       // store token and user
       const token = data.token || data?.token;
+      const adminToken = data.adminToken || null;
       const user = data.user || null;
       if (token) setToken(token);
+      if (adminToken) {
+        try { localStorage.setItem('adminToken', adminToken); } catch (e) {}
+        try { setIsAdmin(true); } catch (e) {}
+      }
       if (user) setUser(user);
       setMessage(mode === 'login' ? 'Logged in' : 'Registered');
       setTimeout(() => {
@@ -77,6 +87,20 @@ const Auth: React.FC<{ onClose: () => void }> = ({ onClose }) => {
             <label className="text-sm font-medium">Password</label>
             <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full border px-2 py-1 rounded" />
           </div>
+
+          {mode === 'register' && (
+            <>
+              <div>
+                <label className="text-sm font-medium">Phone (optional)</label>
+                <input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} className="w-full border px-2 py-1 rounded" placeholder="Your phone number" />
+              </div>
+
+              <div>
+                <label className="text-sm font-medium">Address (optional)</label>
+                <textarea value={address} onChange={(e) => setAddress(e.target.value)} className="w-full border px-2 py-1 rounded" placeholder="Your address" />
+              </div>
+            </>
+          )}
 
           {message && <div className="text-sm text-red-600">{message}</div>}
 
